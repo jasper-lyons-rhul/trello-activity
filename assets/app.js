@@ -273,23 +273,26 @@ var views = {
         }))
       ]))
   },
+  status: function (message) {
+    return views.wrapper('h-48 w-64 flex flex-col justify-center text-center border-black border-2 rounded',
+      html.h2(message));
+  },
   trelloActivity: function (data) {
-    if (data.token && data.key) {
-      if (remoteStatus.error) {
-        return views.wrapper('flex flex-col justify-center items-center h-full', 
-          views.wrapper('h-48 w-64 flex flex-col justify-center text-center border-black border-2 rounded',
-            html.h2(remoteStatus.error.message)));
-      } else if (!data.organizations) {
-        app.fetchOrganizations();
-        return views.wrapper('flex flex-col justify-center items-center h-full', 
-          views.wrapper('h-48 w-64 flex flex-col justify-center text-center border-black border-2 rounded',
-            html.h2('Loading')));
-      } else {
-        return views.organizations(data);
-      }
-    } else {
-      return views.login();
+    if (!data.token || !data.key)
+      return views.wrapper('flex flex-col justify-center items-center h-full',
+        views.login());
+
+    if (remoteStatus.error)
+      return views.wrapper('flex flex-col justify-center items-center h-full',
+        views.status(remoteStatus.error.message));
+
+    if (!data.organizations) {
+      app.fetchOrganizations();
+      return views.wrapper('flex flex-col justify-center items-center h-full',
+        views.status('Loading'));
     }
+
+    return views.organizations(data);
   }
 }
 
