@@ -318,6 +318,10 @@ var views = {
 
     return views.wrapper('flex flex-col justify-center items-center h-full', 
       views.wrapper('h-48 w-64 flex flex-col justify-center text-center border-black border-2 rounded', [
+        views.wrapper('p-2', html.a({
+          href: 'https://trello.com/app-key',
+          text: 'Get Trello api token & key here'
+        })),
         views.wrapper('p-2', key),
         views.wrapper('p-2', token),
         views.wrapper('flex flex-row justify-center',
