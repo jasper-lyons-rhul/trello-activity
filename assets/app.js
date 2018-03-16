@@ -1,6 +1,8 @@
 var data = persistent('trello-activity', {
   key: '',
-  token: ''
+  token: '',
+  from: '',
+  to: ''
 });
 
 var remoteStatus = {};
@@ -20,6 +22,19 @@ var app = {
   },
   setToken: function (token) {
     data.token = token;
+  },
+  setFromDate: function (from) {
+    data.from = from;
+    render();
+  },
+  setToDate: function (to) {
+    data.to = to;
+    render();
+  },
+  refresh: function () {
+    delete data.organizations;
+    delete data.currentBoard.members;
+    render();
   },
   getActionType: function (action) {
     if (organizationalTypes.indexOf(action.type) > -1) {
@@ -135,53 +150,99 @@ var views = {
     });
   },
   member: function (board, member) {
+    var cell = Function.compose(
+      html.span,
+      views.wrapper.bind(views, 'p-2'),
+      views.wrapper.bind(views, 'p-1 w-48')
+    );
+
     if (!member.actions) {
       app.fetchActions(board, member);
 
       return views.wrapper('flex flex-row', [
         views.wrapper('p-1 flex-grow',
           views.wrapper('p-2',
-            html.h3(member.fullName))),
-        views.wrapper('p-1 w-16',
-          views.wrapper('p-2',
-            html.h3('...'))),
-        views.wrapper('p-1 w-16',
-          views.wrapper('p-2',
-            html.h3('...'))),
-        views.wrapper('p-1 w-16',
-          views.wrapper('p-2',
-            html.h3('...')))
+            html.span(member.fullName))),
+        cell('...'),
+        cell('...'),
+        cell('...')
       ])
-    } else {
-      var actionTypes = member.actions.reduce(function(actionTypes, action) {
+    }
+
+    var actionTypes = member.actions
+      .filter(function (action) {
+        if (data.from !== '')
+          return Date.parse(data.from) <= Date.parse(action.date)
+        return true;
+      })
+      .filter(function (action) {
+        if (data.to!== '')
+          return Date.parse(data.to) >= Date.parse(action.date)
+        return true;
+      })
+      .reduce(function(actionTypes, action) {
         var actions = actionTypes[app.getActionType(action)] || [];
         actions.push(action);
         actionTypes[app.getActionType(action)] = actions;
         return actionTypes;
       }, {});
-      return views.wrapper('flex flex-row', [
-        views.wrapper('p-1 flex-grow',
-          views.wrapper('p-2',
-            html.h3(member.fullName))),
-      ].concat(['organizational', 'communicating', 'other'].map(function (actionType) {
-        return views.wrapper('p-1 w-48',
-          views.wrapper('p-2',
-            html.h3((actionTypes[actionType] || []).length.toString())));
-      })));
-    }
+
+    return views.wrapper('flex flex-row', [
+      views.wrapper('p-1 flex-grow',
+        views.wrapper('p-2',
+          html.span(member.fullName))),
+    ].concat(['organizational', 'communicating', 'other'].map(function (actionType) {
+      return cell((actionTypes[actionType] || []).length.toString());
+    })));
   },
   members: function (data, board) {
-    return views.wrapper('min-w-64 flex flex-col items-stretch border-black border-l-2',
-      views.wrapper('p-1 member-grid', [ 
-        views.wrapper('flex flex-row border-black border-b-2', [
-          html.h3('Member'),
-          html.h3('Organization'),
-          html.h3('Work'),
-          html.h3('Other')
-        ].map(function (el) {
-          return views.wrapper('p-1 w-48', views.wrapper('p-2', el));
-        }))
-      ].concat(board.members.map(views.member.bind(views, board)))));
+    var refresh = html.a({
+      className: 'p-2 border-black border-2 rounded hover:bg-black hover:text-white',
+      text: 'Refresh',
+      onclick: app.refresh
+    });
+
+    var from = html.input({
+      className: 'p-2 border-black border-b-2',
+      type: 'date',
+      value: data.from,
+      placeholder: 'From date',
+      onchange: function () {
+        app.setFromDate(this.value);
+      }
+    });
+
+    var to = html.input({
+      className: 'p-2 border-black border-b-2',
+      type: 'date',
+      value: data.to,
+      placeholder: 'To date',
+      onchange: function () {
+        app.setToDate(this.value);
+      }
+    });
+
+    var actions = views.wrapper('p-1 flex flex-row items-center', [
+      refresh,
+      html.label({ text: 'From date:', children: [from] }),
+      html.label({ text: 'To date:', children: [to] })
+    ].map(views.wrapper.bind(views, 'p-1')));
+
+    var columnHeader = Function.compose(
+      html.span,
+      views.wrapper.bind(views, 'p-2'),
+      views.wrapper.bind(views, 'p-1 w-48')
+    );
+
+    var table = views.wrapper('p-1', [ 
+      views.wrapper('flex flex-row border-black border-b-2',
+        ['Member', 'Organization', 'Work', 'Other'].map(columnHeader))
+    ].concat(board.members.map(views.member.bind(views, board))));
+
+    return views.wrapper('min-w-64 flex flex-col items-stretch border-black border-l-2', [
+      actions,
+      table
+    ]);
   },
   currentBoard: function (board) {
     return html.div(board.name);
@@ -191,7 +252,7 @@ var views = {
       views.wrapper('p-2 border-black border-2 rounded ' + (app.isCurrentBoard(board)
           ? 'bg-black text-white'
           : 'bg-none text-black'),
-        html.h3({
+        html.span({
           text: board.name,
           onclick: function () {
             app.setCurrentBoard(board);
@@ -208,27 +269,31 @@ var views = {
       app.fetchBoards(organization);
       return views.wrapper('w-64 flex flex-col justify-center items-stretch p-1',
         html.h2('Loading'));
-    } else if (!data.currentBoard || !app.hasCurrentBoard(organization)) {
+    }
+    
+    if (!data.currentBoard || !app.hasCurrentBoard(organization)) {
       app.setCurrentBoard(organization.boards[0]);
       return views.wrapper('w-64 flex flex-col justify-center items-stretch p-1',
         html.h2('Loading'));
-    } else if (!data.currentBoard.members) {
+    }
+    
+    if (!data.currentBoard.members) {
       app.fetchMembers(organization, data.currentBoard);
       return views.wrapper('w-64 flex flex-col justify-center items-stretch p-1',
         html.h2('Loading'));
-    } else {
-      return views.wrapper('flex flex-row', [
-        views.boards(data, organization),
-        views.members(data, data.currentBoard)
-      ])
     }
+
+    return views.wrapper('flex flex-row', [
+      views.boards(data, organization),
+      views.members(data, data.currentBoard)
+    ]);
   },
   organization: function (organization) {
     return views.wrapper('p-1',
       views.wrapper('p-2 border-black border-2 rounded ' + (app.isCurrentOrganization(organization)
           ? 'bg-black text-white'
           : 'bg-none text-black'),
-        html.h3({
+        html.span({
           text: organization.displayName,
           onclick: function () {
             app.setCurrentOrganization(organization);
@@ -248,30 +313,24 @@ var views = {
     ]);
   },
   login: function () {
-    var key = html.input({
-      className: 'border-black border-b',
-      placeholder: 'key'
-    })
-
-    var token = html.input({
-      className: 'border-black border-b',
-      placeholder: 'token'
-    });
+    var key = html.input({ className: 'border-black border-b', placeholder: 'key' });
+    var token = html.input({ className: 'border-black border-b', placeholder: 'token' });
 
     return views.wrapper('flex flex-col justify-center items-center h-full', 
       views.wrapper('h-48 w-64 flex flex-col justify-center text-center border-black border-2 rounded', [
         views.wrapper('p-2', key),
         views.wrapper('p-2', token),
-        views.wrapper('flex flex-row justify-center', html.a({
-          className: 'p-2 border-black border-2 rounded hover:bg-black hover:text-white',
-          text: 'View Activity',
-          onclick: function () {
-            app.setKey(key.value);
-            app.setToken(token.value);
-            render();
-          }
-        }))
-      ]))
+        views.wrapper('flex flex-row justify-center',
+          html.a({
+            className: 'p-2 border-black border-2 rounded hover:bg-black hover:text-white',
+            text: 'View Activity',
+            onclick: function () {
+              app.setKey(key.value);
+              app.setToken(token.value);
+              render();
+            }
+          }))
+        ]));
   },
   status: function (message) {
     return views.wrapper('h-48 w-64 flex flex-col justify-center text-center border-black border-2 rounded',

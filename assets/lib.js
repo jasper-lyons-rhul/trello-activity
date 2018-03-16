@@ -16,6 +16,23 @@ Object.isObject = Object.isObject ||
   (function (o) { return !Array.isArray(o) && typeof o === 'object' });
 Object.copy = function (o) { return JSON.parse(JSON.stringify(o)) };
 
+Function.curry = Function.curry ||
+  (function () {
+    var args = Array.from(arguments);
+    return args[0].bind.apply(args[0], args);
+  });
+
+Function.compose = Function.compose ||
+  (function () {
+    var functions = Array.from(arguments);
+
+    return function () {
+      return functions.slice(1).reduce(function (arg, func) {
+        return func.call(null, arg);
+      }, functions[0].apply(null, Array.from(arguments)));
+    };
+  });
+
 // ----- STREAMS STUFF -----
 //
 function Stream(parent) {
