@@ -4,6 +4,15 @@ var data = persistent('trello-activity', {
 });
 
 var remoteStatus = {};
+var organizationalTypes = [
+'addAttachmentToCard', 'addChecklistToCard', 'addLabelToCard', 'convertToCardFromCheckItem', 'createLabel', 'createBoard', 'createCard', 'createChecklist', 'createList', 'createOrganization', 'deleteAttachmentFromCard', 'deleteCard', 'deleteCheckItem', 'deleteLabel', 'moveCardFromBoard', 'moveCardToBoard', 'moveListFromBoard', 'moveListToBoard', 'removeChecklistFromCard', 'removeFromOrganizationBoard', 'removeLabelFromCard', 'updateBoard', 'updateLabel'
+];
+var communicatingWorkTypes = [
+'commentCard', 'updateCheckItemStateOnCard', 'updateChecklist', 'updateCard', 'updateCheckItem', 'updateList'
+];
+var other = [
+'addAdminToBoard', 'addAdminToOrganization', 'addBoardsPinnedToMember', 'addMemberToBoard', 'addMemberToCard', 'addMemberToOrganization', 'addToOrganizationBoard', 'copyBoard', 'copyCard', 'copyChecklist', 'copyCommentCard', 'createBoardInvitation', 'createBoardPreference', 'createOrganizationInvitation', 'deleteBoardInvitation', 'deleteOrganizationInvitation', 'disablePlugin', 'disablePowerUp', 'emailCard', 'enablePlugin', 'enablePowerUp', 'makeAdminOfBoard', 'makeAdminOfOrganization', 'makeNormalMemberOfBoard', 'makeNormalMemberOfOrganization', 'makeObserverOfBoard', 'memberJoinedTrello', 'removeAdminFromBoard', 'removeAdminFromOrganization', 'removeBoardsPinnedFromMember', 'removeMemberFromBoard', 'removeMemberFromCard', 'removeMemberFromOrganization', 'unconfirmedBoardInvitation', 'unconfirmedOrganizationInvitation', 'updateMember', 'updateOrganization', 'voteOnCard', 
+];
 
 var app = {
   setKey: function (key) {
@@ -12,13 +21,22 @@ var app = {
   setToken: function (token) {
     data.token = token;
   },
+  getActionType: function (action) {
+    if (organizationalTypes.indexOf(action.type) > -1) {
+      return 'organizational';
+    } else if (communicatingWorkTypes.indexOf(action.type) > -1) {
+      return 'communicating';
+    } else {
+      return 'other';
+    }
+  },
   fetchActions: function (board, member) {
     if (!remoteStatus.actions) {
       remoteStatus.actions = true
       fetch(String.format('/api/members/{id}/actions?idModels={idModels}&filters={filters}&limit={limit}&key={key}&token={token}', {
         id: member.id,
         idModels: board.id,
-        filters: 'addAttachmentToCard,addChecklistToCard,addMemberToCard,commentCard,copyCommentCard,convertToCardFromCheckItem,createCard,copyCard,deleteAttachmentFromCard,emailCard,moveCardFromBoard,moveCardToBoard,removeChecklistFromCard,removeMemberFromCard,updateCard:idList,updateCard:closed,updateCard:due,updateCard:dueComplete,updateCheckItemStateOnCard,addMemberToBoard,addToOrganizationBoard,copyBoard,createBoard,createList,deleteCard,disablePlugin,disablePowerUp,enablePlugin,enablePowerUp,makeAdminOfBoard,makeNormalMemberOfBoard,makeObserverOfBoard,moveListFromBoard,moveListToBoard,removeFromOrganizationBoard,unconfirmedBoardInvitation,unconfirmedOrganizationInvitation,updateBoard,updateList:closed,updateMember',
+        filters: organizationalTypes.concat(communicatingWorkTypes, other).join(','),
         limit: 1000,
         key: data.key,
         token: data.token
@@ -26,6 +44,9 @@ var app = {
         .then(function (actions) {
           member.actions = actions;
           remoteStatus.actions = false;
+          render();
+        }).catch(function (err) {
+          remoteStatus.error = err
           render();
         });
     }
@@ -42,6 +63,9 @@ var app = {
         .then(function (members) {
           board.members = members;
           remoteStatus.members = false;
+          render();
+        }).catch(function (err) {
+          remoteStatus.error = err
           render();
         });
     }
@@ -70,6 +94,9 @@ var app = {
           organization.boards = boards;
           remoteStatus.boards = false;
           render();
+        }).catch(function (err) {
+          remoteStatus.error = err
+          render();
         });
     }
   },
@@ -88,6 +115,9 @@ var app = {
         .then(function (organizations) {
           data.organizations = organizations;
           remoteStatus.organizations = false;
+          render();
+        }).catch(function (err) {
+          remoteStatus.error = err
           render();
         });
     }
@@ -110,38 +140,58 @@ var views = {
 
       return views.wrapper('flex flex-row', [
         views.wrapper('p-1 flex-grow',
-          views.wrapper('p-2 border-black border-2 rounded',
+          views.wrapper('p-2',
             html.h3(member.fullName))),
         views.wrapper('p-1 w-16',
-          views.wrapper('p-2 border-black border-2 rounded',
+          views.wrapper('p-2',
+            html.h3('...'))),
+        views.wrapper('p-1 w-16',
+          views.wrapper('p-2',
+            html.h3('...'))),
+        views.wrapper('p-1 w-16',
+          views.wrapper('p-2',
             html.h3('...')))
       ])
     } else {
+      var actionTypes = member.actions.reduce(function(actionTypes, action) {
+        var actions = actionTypes[app.getActionType(action)] || [];
+        actions.push(action);
+        actionTypes[app.getActionType(action)] = actions;
+        return actionTypes;
+      }, {});
       return views.wrapper('flex flex-row', [
         views.wrapper('p-1 flex-grow',
-          views.wrapper('p-2 border-black border-2 rounded',
+          views.wrapper('p-2',
             html.h3(member.fullName))),
-        views.wrapper('p-1 w-16',
-          views.wrapper('p-2 border-black border-2 rounded',
-            html.h3(member.actions.length.toString())))
-      ])
+      ].concat(['organizational', 'communicating', 'other'].map(function (actionType) {
+        return views.wrapper('p-1 w-48',
+          views.wrapper('p-2',
+            html.h3((actionTypes[actionType] || []).length.toString())));
+      })));
     }
   },
   members: function (data, board) {
     return views.wrapper('min-w-64 flex flex-col items-stretch border-black border-l-2',
-      views.wrapper('p-1',
-        board.members.map(views.member.bind(views, board))));
+      views.wrapper('p-1 member-grid', [ 
+        views.wrapper('flex flex-row border-black border-b-2', [
+          html.h3('Member'),
+          html.h3('Organization'),
+          html.h3('Work'),
+          html.h3('Other')
+        ].map(function (el) {
+          return views.wrapper('p-1 w-48', views.wrapper('p-2', el));
+        }))
+      ].concat(board.members.map(views.member.bind(views, board)))));
   },
   currentBoard: function (board) {
     return html.div(board.name);
   },
   board: function (board) {
     return views.wrapper('p-1',
-      views.wrapper('p-2 border-black border-2 rounded',
+      views.wrapper('p-2 border-black border-2 rounded ' + (app.isCurrentBoard(board)
+          ? 'bg-black text-white'
+          : 'bg-none text-black'),
         html.h3({
-          className: (app.isCurrentBoard(board)
-            ? 'bg-black text-white'
-            : 'bg-none text-black'),
           text: board.name,
           onclick: function () {
             app.setCurrentBoard(board);
@@ -175,11 +225,10 @@ var views = {
   },
   organization: function (organization) {
     return views.wrapper('p-1',
-      views.wrapper('p-2 border-black border-2 rounded',
+      views.wrapper('p-2 border-black border-2 rounded ' + (app.isCurrentOrganization(organization)
+          ? 'bg-black text-white'
+          : 'bg-none text-black'),
         html.h3({
-          className: (app.isCurrentOrganization(organization)
-            ? 'bg-black text-white'
-            : 'bg-none text-black'),
           text: organization.displayName,
           onclick: function () {
             app.setCurrentOrganization(organization);
@@ -226,7 +275,11 @@ var views = {
   },
   trelloActivity: function (data) {
     if (data.token && data.key) {
-      if (!data.organizations) {
+      if (remoteStatus.error) {
+        return views.wrapper('flex flex-col justify-center items-center h-full', 
+          views.wrapper('h-48 w-64 flex flex-col justify-center text-center border-black border-2 rounded',
+            html.h2(remoteStatus.error.message)));
+      } else if (!data.organizations) {
         app.fetchOrganizations();
         return views.wrapper('flex flex-col justify-center items-center h-full', 
           views.wrapper('h-48 w-64 flex flex-col justify-center text-center border-black border-2 rounded',

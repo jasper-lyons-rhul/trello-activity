@@ -14,6 +14,12 @@ end
 class TrelloActivity < Sinatra::Base
   set :public_folder, File.dirname(__FILE__)
 
+  helpers do
+    def cache
+      @cache ||= {}
+    end
+  end
+
   get '/' do
     Index.new.render
   end
