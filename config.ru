@@ -1,12 +1,12 @@
 require 'sinatra/base'
-require './lib/viewer'
+require 'viewer'
 require './lib/trello.rb'
 
 class Index < Viewer::View
   configure do |config|
     config.template = 'index'
     config.css.add('assets/app.css')
-    config.js.add('assets/lib.js')
+    config.js.add('assets/dom.js')
     config.js.add('assets/app.js')
   end
 end

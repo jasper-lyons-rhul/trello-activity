@@ -26,7 +26,7 @@ class Http
     "#{url}?#{new_params.join('&')}"
   end
 
-  def request(method, url, params = nil, body = {})
+  def request(method, url, params = nil, body = {}, retry_time = 2)
     uri = URI(with_params(url, params))
     http = Net::HTTP.new(uri.host, uri.port)
 
@@ -43,8 +43,17 @@ class Http
           end
 
     http.request(req).tap do |res|
-      unless res.kind_of?(Net::HTTPSuccess)
+      case res
+      when Net::HTTPSuccess
+        res
+      when Net::HTTPError
         puts "#{uri} - #{res.code} - #{res.body}"
+
+        case res.code
+        when 429
+          sleep retry_time
+          request(method, url, params, body, retry_time * retry_time)
+        end
       end
     end
   end
@@ -82,7 +91,7 @@ module Trello
       @cache.fetch(entity) do
         path = from_api(path(entity))
         res = @http.get(path, params)
-        JSON.parse(res.body)
+        @cache[entity] = JSON.parse(res.body)
       end
     end
 
