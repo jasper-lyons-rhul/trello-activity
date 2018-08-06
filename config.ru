@@ -1,6 +1,7 @@
 require 'sinatra/base'
 require 'viewer'
 require './lib/trello.rb'
+require './server.rb'
 
 class Index < Viewer::View
   configure do |config|
@@ -21,7 +22,7 @@ class TrelloActivity < Sinatra::Base
   end
 
   get '/' do
-    Index.new.render
+    Index.new
   end
 
   get '/api/organizations' do
@@ -43,7 +44,7 @@ class TrelloActivity < Sinatra::Base
       .boards.map(&:data))
   end
 
-  get '/api/organization/:id/members' do
+  get '/api/organizations/:id/members' do
     http = Http.new({}, {
       key: params[:key],
       token: params[:token]
@@ -69,4 +70,4 @@ class TrelloActivity < Sinatra::Base
 end
 
 
-run TrelloActivity
+run Server
