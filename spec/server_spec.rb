@@ -9,7 +9,7 @@ module Rack
   class MockResponse
     def initialize(status, headers, body, errors = StringIO.new(""))
       @original_headers = headers
-      @errors           = errors.string if errors.respond_to?(:string)
+      @errors = errors.string if errors.respond_to?(:string)
       @body_object = body
 
       super(body, status, headers)
@@ -25,7 +25,23 @@ describe Server do
   include Rack::Test::Methods
 
   def app
-    Server.new
+    Class.new(Server) do
+      def initialize(app = nil)
+        request_cache = Class.new do
+          def fetch(key, &block)
+            '{}'
+          end
+        end.new
+
+        super(app, request_cache)
+      end
+
+      private
+
+      def me
+        Struct.new(:organizations).new([])
+      end
+    end.new()
   end
 
   describe '/' do

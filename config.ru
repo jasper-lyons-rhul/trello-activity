@@ -1,16 +1,4 @@
-require 'sinatra/base'
-require 'viewer'
-require './lib/trello.rb'
 require './server.rb'
-
-class Index < Viewer::View
-  configure do |config|
-    config.template = 'index'
-    config.css.add('assets/app.css')
-    config.js.add('assets/dom.js')
-    config.js.add('assets/app.js')
-  end
-end
 
 class TrelloActivity < Sinatra::Base
   set :public_folder, File.dirname(__FILE__)
@@ -69,5 +57,4 @@ class TrelloActivity < Sinatra::Base
   end
 end
 
-
-run Server
+run Server.new(nil, {})
