@@ -1,9 +1,8 @@
-require 'viewer'
+require './application.rb'
 
-class Index < Viewer::View
+class Index < Application
   configure do |config|
     config.template = 'index'
-    config.css.add('assets/app.css')
   end
 
   def initialize(key)

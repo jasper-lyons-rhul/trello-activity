@@ -21,27 +21,24 @@ module Rack
   end
 end
 
+
 describe Server do
   include Rack::Test::Methods
 
   def app
-    Class.new(Server) do
-      def initialize(app = nil)
-        request_cache = Class.new do
-          def fetch(key, &block)
-            '{}'
-          end
-        end.new
-
-        super(app, request_cache)
+    mock_request_cache = Class.new do
+      def fetch(key, &block)
+        Struct.new(:body).new('{}')
       end
+    end
 
+    Class.new(Server) do
       private
 
       def me
         Struct.new(:organizations).new([])
       end
-    end.new()
+    end.new(nil, mock_request_cache.new)
   end
 
   describe '/' do

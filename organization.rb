@@ -1,6 +1,6 @@
-require 'viewer'
+require './application.rb'
 
-class Organization < Viewer::View
+class Organization < Application
   configure do |config|
     config.template = 'organization'
   end

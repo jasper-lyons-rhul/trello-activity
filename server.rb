@@ -7,6 +7,7 @@ require './organization.rb'
 
 class Server < Sinatra::Base
   enable :sessions
+  set :public_folder, File.dirname(__FILE__)
 
   def initialize(app = nil, request_cache = {})
     super(app)

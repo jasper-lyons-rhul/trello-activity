@@ -1,39 +1,14 @@
-<!DOCTYPE html>
-<html lang="en" class="w-full h-full">
-<head>
-  <meta charset="UTF-8">
-  <title></title>
-  <%-> css %>
-  <%-> js  %>
+<header class="p-8 text-center">
+  <h1 class="p-8 text-5xl">Trello Activity</h1>
+</header>
+<main class="text-center max-w-md m-auto">
+  <p class="p-4">
+    Know what you teams are upto at a glance.
+  </p>
 
-  <!-- Global site tag (gtag.js) - Google Analytics -->
-  <script async src="https://www.googletagmanager.com/gtag/js?id=UA-56074239-4"></script>
-  <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-
-    gtag('config', 'UA-56074239-4');
-  </script>
-
-  <script>
-    window.onload = function () {
-      if (window.location.hash.indexOf('token') > -1) {
-        var form = document.createElement('form');
-        document.body.appendChild(form);
-        form.method = 'POST';
-        form.action = '/login';
-        var input = document.createElement('input');
-        input.type = 'hidden';
-        input.name = 'token';
-        input.value = window.location.hash.split('=')[1];
-        form.appendChild(input);
-        form.submit();
-      }
-    }
-  </script>
-</head>
-<body>
-  <a href="https://trello.com/1/authorize?expiration=never&scope=read,write,account&callback_method=fragment&return_url=http://localhost:9292/&response_type=token&name=Trello%20Activity&key=<%= key %>">login</a>
-</body>
-</html>
+  <div class="p-4">
+    <a 
+      class="inline-block p-2 border-2 border-black text-black rounded no-underline hover:bg-black hover:text-white"
+      href="https://trello.com/1/authorize?expiration=never&scope=read,write,account&callback_method=fragment&return_url=http://localhost:9292/&response_type=token&name=Trello%20Activity&key=<%= key %>">login</a>
+  </div>
+</main>

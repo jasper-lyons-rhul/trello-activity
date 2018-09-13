@@ -1,6 +1,7 @@
-require 'viewer'
+require './application.rb'
+require './organization_graph.rb'
 
-class Organizations < Viewer::View
+class Organizations < Application
   configure do |config|
     config.template = 'organizations'
   end
@@ -12,5 +13,9 @@ class Organizations < Viewer::View
 
   expose :organizations do
     @organizations
+  end
+
+  def graph_for(organization)
+    OrganizationGraph.new(organization)
   end
 end

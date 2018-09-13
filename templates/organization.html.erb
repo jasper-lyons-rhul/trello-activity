@@ -1,33 +1,24 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title></title>
-</head>
-<body>
   <h2><%= organization.display_name %></h2>
 
-  <table>
-    <thead>
+<table>
+  <thead>
+    <tr>
+      <th>Members</th>
+      <% organization.boards.each do |board| %>
+        <th><%= board.name %></th>
+      <% end %>
+    </tr>
+  </thead>
+
+  <tbody>
+    <% organization.members.each do |member| %>
       <tr>
-        <th>Members</th>
+        <td><%= member.full_name %></td>
+
         <% organization.boards.each do |board| %>
-          <th><%= board.name %></th>
+          <td><%= member.actions(idModels: board.id).size %></td>
         <% end %>
       </tr>
-    </thead>
-
-    <tbody>
-      <% organization.members.each do |member| %>
-        <tr>
-          <td><%= member.full_name %></td>
-
-          <% organization.boards.each do |board| %>
-            <td><%= member.actions(idModels: board.id).size %></td>
-          <% end %>
-        </tr>
-      <% end %>
-    </tbody>
-  </table>
-</body>
-</html>
+    <% end %>
+  </tbody>
+</table>

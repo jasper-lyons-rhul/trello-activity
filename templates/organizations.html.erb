@@ -1,16 +1,28 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title></title>
-</head>
-<body>
-  <% organizations.each do |organization| %>
-    <p>
-      <a href="/organizations/<%= organization.id %>">
-        <%= organization.display_name %>
-      </a>
-    </p>
-  <% end %>
-</body>
-</html>
+<header class="text-center">
+  <h1 class="p-8">Organizations</h1>
+</header>
+
+<main>
+  <section class="max-w-sm m-auto">
+    <div class="p-4">
+      <input
+         class="w-full border-b border-black"
+         placeholder="Team 10"
+         type="search"
+         id="query">
+    </div>
+
+    <ul class="p-2 list-reset" id="results">
+      <% organizations.each do |organization| %>
+        <li class="p-2">
+          <a href="/organizations/<%= organization.id %>">
+            <span>
+              <%= organization.display_name %>
+            </span>
+            <%= graph_for(organization) %>
+          </a>
+        </li>
+      <% end %>
+    </div>
+  </section>
+</main>
