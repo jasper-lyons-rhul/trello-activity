@@ -1,5 +1,5 @@
 class SessionsController < ApplicationController
   def create
-    byebug
+    redirect_to organizations_url
   end
 end
