@@ -1,3 +1,5 @@
+import { h } from 'src/dom.js';
+
 String.format = String.format || function (string, obj) {
   return Object.keys(obj).reduce(function (string, key) {
     return string.replace('{'+key+'}', obj[key]);
@@ -25,11 +27,18 @@ var other = [
 ];
 
 var state = {
-  key: 'e1a1b409f17a0c5ff1228292009108b7',
-  token: '588495dc8a3e976d8fc9aaa52fb9a9cdc0d64ebd766c9d65e7ec2b160669be0d',
+  oauth_token: null,
+  oauth_token_secret: null,
   from: '',
   to: '',
-  error: '',
+  history: [],
+};
+
+window.onpopstate = function () {
+  actions.historyBack();
+};
+
+var State = {
   hasCurrentBoard: function (organization) {
     var self = this;
 
@@ -41,8 +50,8 @@ var state = {
   isCurrentBoard: function (board) {
     return this.currentBoard && this.currentBoard.id === board.id;
   },
-  isCurrentOrganization: function (organization) {
-    return this.currentOrganization.id === organization.id;
+  isCurrentOrganization: function (state, organization) {
+    return state.currentOrganization.id === organization.id;
   },
   getActionType: function (action) {
     if (organizationalTypes.indexOf(action.type) > -1) {
@@ -52,7 +61,7 @@ var state = {
     } else {
       return 'other';
     }
-  },
+  }
 };
 
 var requests = {
@@ -73,6 +82,18 @@ var requests = {
 };
 
 var actions = {
+  historyBack: function () {
+    return function (state) {
+      if (state.history.length > 0) {
+        var oldState = state.history.pop();
+        return {
+          currentMember: oldState.curentMember,
+          currentBoard: oldState.currentBoard,
+          currentOrganization: oldState.currentOrganization
+        };
+      }
+    }
+  },
   setKeyAndToken: function (keyAndToken) {
     return keyAndToken;
   },
@@ -83,7 +104,7 @@ var actions = {
     return { to: to };
   },
   refresh: function () {
-    return { organizations: null, currentBoard: { members: null } };
+    return { organization: null, currentBoard: { members: null } };
   },
   setActionsFor: function (member, actions) {
     member.actions = actions;
@@ -91,84 +112,93 @@ var actions = {
   },
   fetchActions: function (board, member) {
     return function (state) {
-      requests.fetch(String.format('/api/members/{id}/actions?idModels={idModels}&filters={filters}&limit={limit}&key={key}&token={token}', {
+      requests.fetch(String.format('/api/members/{id}/actions?idModels={idModels}&filters={filters}&limit={limit}&oauth_token={oauth_token}&oauth_token_secret={oauth_token_secret}', {
         id: member.id,
         idModels: board.id,
         filters: organizationalTypes.concat(communicatingWorkTypes, other).join(','),
         limit: 1000,
-        key: state.key,
-        token: state.token
+        oauth_token: state.oauth_token,
+        oauth_token_secret: state.oauth_token_secret
       }))
         .then(function (r) { return r.json(); })
-        .then(actions.setActionsFor.bind(actions, member))
-        .catch(actions.setError);
+        .then(actions.setActionsFor.bind(actions, member));
     };
   },
   setMembersFor: function (board, members) {
     board.members = members;
-    return {};
+    return { };
   },
   fetchMembers: function (organization, board) {
     return function (state) {
-      requests.fetch(String.format('/api/organization/{id}/members?idModels={idModels}&key={key}&token={token}', {
+      requests.fetch(String.format('/api/organization/{id}/members?idModels={idModels}&oauth_token={oauth_token}&oauth_token_secret={oauth_token_secret}', {
         idModels: board.id,
         id: organization.id,
-        key: state.key,
-        token: state.token
+        oauth_token: state.oauth_token,
+        oauth_token_secret: state.oauth_token_secret
       }))
         .then(function(r) { return r.json(); })
         .then(function (members) {
           actions.setMembersFor(board, members);
           members.map(actions.fetchActions.bind(actions, board));
-        })
-        .catch(actions.setError);
+        });
     }
   },
   setBoardsFor: function (organization, boards) {
     organization.boards = boards;
-    return {};
+    return { };
   },
   fetchBoards: function (organization) {
     return function (state) {
-      requests.fetch(String.format('/api/organizations/{id}/boards?key={key}&token={token}', {
+      requests.fetch(String.format('/api/organizations/{id}/boards?oauth_token={oauth_token}&oauth_token_secret={oauth_token_secret}', {
         id: organization.id,
-        key: state.key,
-        token: state.token
+        oauth_token: state.oauth_token,
+        oauth_token_secret: state.oauth_token_secret
       }))
         .then(function(r) { return r.json(); })
         .then(function (boards) {
           actions.setBoardsFor(organization, boards);
           boards.map(actions.fetchMembers.bind(actions, organization));
-        })
-        .catch(actions.setError)
+        });
     };
   },
   setCurrentOrganization: function (organization) {
-    return {
-      currentMember: null,
-      currentBoard: null,
-      currentOrganization: organization
-    };
+    return function (state) {
+      history.pushState(state.history.length, null, window.location.toString());
+      return {
+        currentMember: null,
+        currentBoard: null,
+        currentOrganization: organization,
+        history: state.history.concat({
+          currentBoard: state.currentBoard,
+          currentMember: state.currentMember,
+          currentOrganization: state.currentOrganization
+        })
+      };
+    }
   },
   setOrganizations: function (organizations) {
     return { organizations: organizations };
   },
-  setError: function (error) {
-    return { error: error };
-  },
   fetchOrganizations: function () {
     return function (state) {
-      requests.fetch(String.format('/api/organizations?key={key}&token={token}', state))
+      requests.fetch(String.format('/api/organizations?oauth_token={oauth_token}&oauth_token_secret={oauth_token_secret}', state))
         .then(function (r) { return r.json() })
-        .then(actions.setOrganizations)
-        .catch(actions.setError);
+        .then(actions.setOrganizations);
     }
   },
   setCurrentMember: function (board, member) {
-    return {
-      currentBoard: board,
-      currentMember: member
-    };
+    return function (state) {
+      history.pushState(state.history.length, null, window.location.toString());
+      return {
+        currentBoard: board,
+        currentMember: member,
+        history: state.history.concat({
+          currentBoard: state.currentBoard,
+          currentMember: state.currentMember,
+          currentOrganization: state.currentOrganization
+        })
+      };
+    }
   }
 };
 
@@ -201,6 +231,8 @@ var views = {
       ]));
   },
   attachment: function (state, actions, attachment) {
+    var url = attachment.data.attachment.url;
+    console.log(attachment);
     return h('div', { className: 'p-1' }, 
       h('div', { className: 'p-2 border-2 border-black rounded' }, [
         h('div', { className: '' }, [
@@ -209,7 +241,11 @@ var views = {
             href: 'https://trello.com/c/' + attachment.data.card.shortLink + '#action-' + attachment.id
           }, attachment.data.card.name),
         ]),
-        h('img', { className: 'w-full', src: attachment.data.attachment.previewUrl })
+        url !== undefined
+        ? (url.match(/\.(png|jpg|svg)$/)
+          ? h('img', { className: 'w-full', src: url })
+          : h('a', { target: '_blank', href: url }, url))
+        : ''
       ]));
   },
   movedCard: function (state, actions, action) {
@@ -297,7 +333,7 @@ var views = {
     ]);
   },
   boards: function (state, actions, organization) {
-    var members = organization.boards[0].members;
+    var members = organization.boards[0].members || [];
     var memberIds = members.map(get('id'));
     var memberNames = members.map(get('fullName'));
 
@@ -316,13 +352,13 @@ var views = {
               onclick: function () {
                 actions.setCurrentMember(board, member);
               }
-            }, member.actions.length);
+            }, (member.actions || []).length);
           }));
       }));
     return views.table(membersByBoards);
   },
   currentOrganization: function (state, actions, organization) {
-    if (!organization.boards) {
+    if (!organization || !organization.boards) {
       actions.fetchBoards(organization);
       return views.wrapper('w-64 flex flex-col justify-center items-stretch p-1',
         h("h2",'Loading'));
@@ -336,7 +372,7 @@ var views = {
   },
   organization: function (state, actions, organization) {
     return views.wrapper('p-1',
-      views.wrapper('p-2 border-black border-2 rounded ' + (state.isCurrentOrganization(organization)
+      views.wrapper('p-2 border-black border-2 rounded ' + (State.isCurrentOrganization(state, organization)
           ? 'bg-black text-white'
           : 'bg-none text-black'),
         h("span",{
@@ -358,39 +394,13 @@ var views = {
         views.currentOrganization(state, actions, state.currentOrganization))
     ]);
   },
-  login: function (state, actions) {
-    var key = h("input", { className: 'border-black border-b', placeholder: 'key' });
-    var token = h("input", { className: 'border-black border-b', placeholder: 'token' });
-
-    return views.wrapper('flex flex-col justify-center items-center h-full', 
-      views.wrapper('h-48 w-64 flex flex-col justify-center text-center border-black border-2 rounded', [
-        views.wrapper('p-2',
-          h("a", {
-            href: 'https://trello.com/app-key'
-            }, 'Get Trello api token & key here')),
-        views.wrapper('p-2', key),
-        views.wrapper('p-2', token),
-        views.wrapper('flex flex-row justify-center',
-          h("a",{
-            className: 'p-2 border-black border-2 rounded hover:bg-black hover:text-white',
-            onclick: function () {
-              actions.setKeyAndToken({ key: key.value, token: token.value });
-            }
-          }, 'View Activity')) 
-        ]));
-  },
   status: function (message) {
     return views.wrapper('h-48 w-64 flex flex-col justify-center text-center border-black border-2 rounded',
-      h("h2",message));
+      h("h2", {}, message));
   },
   trelloActivity: function (state, actions) {
-    if (!state.token || !state.key)
-      return views.wrapper('flex flex-col justify-center items-center h-full',
-        views.login(state, actions));
-
-    if (state.error)
-      return views.wrapper('flex flex-col justify-center items-center h-full',
-        views.status(state.error));
+    if (!state.oauth_token || !state.oauth_token_secret)
+      return h('div');
 
     if (!state.organizations) {
       actions.fetchOrganizations();
@@ -402,6 +412,7 @@ var views = {
   }
 }
 
-window.onload = function () {
-  mount(state, actions, views.trelloActivity, document.body);
-}
+window.state = state;
+window.actions = actions;
+
+export { actions, views, state };

@@ -108,6 +108,7 @@ GEM
     minitest (5.11.3)
     msgpack (1.2.4)
     multi_json (1.13.1)
+    mustermann (1.0.3)
     nio4r (2.3.1)
     nokogiri (1.8.5)
       mini_portile2 (~> 2.3.0)
@@ -127,6 +128,10 @@ GEM
     public_suffix (3.0.3)
     puma (3.12.0)
     rack (2.0.6)
+    rack-protection (2.0.5)
+      rack
+    rack-proxy (0.6.5)
+      rack
     rack-test (1.1.0)
       rack (>= 1.0, < 3)
     rails (5.2.2)
@@ -174,6 +179,11 @@ GEM
     selenium-webdriver (3.141.0)
       childprocess (~> 0.5)
       rubyzip (~> 1.2, >= 1.2.2)
+    sinatra (2.0.5)
+      mustermann (~> 1.0)
+      rack (~> 2.0)
+      rack-protection (= 2.0.5)
+      tilt (~> 2.0)
     spring (2.0.2)
       activesupport (>= 4.2)
     spring-watcher-listen (2.0.1)
@@ -201,6 +211,10 @@ GEM
       activemodel (>= 5.0)
       bindex (>= 0.4.0)
       railties (>= 5.0)
+    webpacker (3.5.5)
+      activesupport (>= 4.2)
+      rack-proxy (>= 0.6.1)
+      railties (>= 4.2)
     websocket-driver (0.7.0)
       websocket-extensions (>= 0.1.0)
     websocket-extensions (0.1.3)
@@ -211,6 +225,7 @@ PLATFORMS
   ruby
 
 DEPENDENCIES
+  addressable
   bootsnap (>= 1.1.0)
   byebug
   capybara (>= 2.15)
@@ -219,6 +234,7 @@ DEPENDENCIES
   dotenv-rails
   jbuilder (~> 2.5)
   listen (>= 3.0.5, < 3.2)
+  oauth
   omniauth
   omniauth-trello
   pg
@@ -226,12 +242,14 @@ DEPENDENCIES
   rails (~> 5.2.2)
   sass-rails (~> 5.0)
   selenium-webdriver
+  sinatra
   spring
   spring-watcher-listen (~> 2.0.0)
   turbolinks (~> 5)
   tzinfo-data
   uglifier (>= 1.3.0)
   web-console (>= 3.3.0)
+  webpacker
 
 RUBY VERSION
    ruby 2.5.1p57

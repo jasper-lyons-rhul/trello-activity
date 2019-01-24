@@ -5,6 +5,12 @@ ruby '2.5.1'
 
 # Bundle edge Rails instead: gem 'rails', github: 'rails/rails'
 gem 'rails', '~> 5.2.2'
+# to handle the old api while migrating
+gem 'sinatra'
+
+# So that we can have tailwindcss
+gem 'webpacker'
+
 gem 'pg'
 # Use Puma as the app server
 gem 'puma', '~> 3.11'
@@ -27,8 +33,10 @@ gem 'jbuilder', '~> 2.5'
 # gem 'bcrypt', '~> 3.1.7'
 
 # Omni Auth for Trello API
+gem 'oauth'
 gem 'omniauth'
 gem 'omniauth-trello'
+gem 'addressable'
 
 # Use ActiveStorage variant
 # gem 'mini_magick', '~> 4.8'

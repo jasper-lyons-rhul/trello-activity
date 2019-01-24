@@ -22,7 +22,11 @@ function log(i) {
   return i;
 }
 
+// history api is limited in size so create our own.
+var stateHistory = [];
+
 function mount(state, actions, view, container, rootNode) {
+  // Manage history changes
   actions = merge(actions, actions, {
     default: function (old, _, key) {
       var action = old[key];
@@ -133,3 +137,5 @@ function memoize(fn) {
     return cache[key] || (cache[key] = fn.apply(this, arguments));
   };
 }
+
+export { mount, h };
