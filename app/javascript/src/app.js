@@ -386,12 +386,21 @@ var views = {
 
         return [h('a', { href: board.url, target: "_blank" }, board.name)]
           .concat(boardMembers.map(function (member) {
+            var allActions = (member.actions || []).length;
+            var usefulActions = (member.actions || [])
+              .filter(function (action) {
+                 return other.indexOf(action.type) < 0;
+              }).length;
+
             return h('button', {
               className: 'p-2 border border-black rounded hover:bg-black hover:text-white',
               onclick: function () {
                 actions.setCurrentMember(board, member);
               }
-            }, (member.actions || []).length);
+            }, String.format('{all} ({useful})', {
+              all: allActions,
+              useful: usefulActions
+            }));
           }));
       }));
     return views.table(membersByBoards);
