@@ -26,6 +26,8 @@ var other = [
   'addAdminToBoard', 'addAdminToOrganization', 'addBoardsPinnedToMember', 'addMemberToBoard', 'addMemberToCard', 'addMemberToOrganization', 'addToOrganizationBoard', 'createBoardInvitation', 'createBoardPreference', 'createOrganizationInvitation', 'deleteBoardInvitation', 'deleteOrganizationInvitation', 'disablePlugin', 'disablePowerUp', 'emailCard', 'enablePlugin', 'enablePowerUp', 'makeAdminOfBoard', 'makeAdminOfOrganization', 'makeNormalMemberOfBoard', 'makeNormalMemberOfOrganization', 'makeObserverOfBoard', 'memberJoinedTrello', 'removeAdminFromBoard', 'removeAdminFromOrganization', 'removeBoardsPinnedFromMember', 'removeMemberFromBoard', 'removeMemberFromCard', 'removeMemberFromOrganization', 'unconfirmedBoardInvitation', 'unconfirmedOrganizationInvitation', 'updateMember', 'updateOrganization'
 ];
 
+var hiddenMemberUsernames = ['carlosmatos7', 'dave_w1', 'jasper803', 'duncanmitchell', 'matthew54106460'];
+
 var state = {
   oauth_token: null,
   oauth_token_secret: null,
@@ -203,6 +205,113 @@ var actions = {
 };
 
 var views = {
+  action: function (action) {
+    return views.actions[action.type](action);
+  },  
+  actions: {
+    base: function (header, body) {
+      return h('div', { className: 'p-1' }, 
+        h('div', { className: 'border-2 border-black rounded' }, [
+          h('div', { className: 'p-2 border-b border-black' }, header),
+          h('div', { className: 'p-2' }, body)
+        ]));
+    },
+    header: function (action) {
+      var href = String
+        .format('https://trello.com/c/{shortLink}#action-{id}', {
+          shortLink: action.data.shortLink,
+          id: action.id
+        });
+
+      return h('a', { className: '', href: href }, action.data.card.name);
+    },
+    addAttachmentToCard: function(action) {
+      var url = action.data.attachment.url;
+
+      return views.actions.base(
+        views.actions.header(action),
+        url !== undefined
+        ? (url.match(/\.(png|jpg|svg)$/)
+          ? h('img', { className: 'w-full', src: url })
+          : h('a', { target: '_blank', href: url }, url))
+        : ''
+      );
+    },
+    addChecklistToCard: function() {},
+    addLabelToCard: function() {},
+    convertToCardFromCheckItem: function() {},
+    createLabel: function() {},
+    createBoard: function() {},
+    createCard: function() {},
+    createChecklist: function() {},
+    createList: function() {},
+    createOrganization: function() {},
+    deleteAttachmentFromCard: function() {},
+    deleteCard: function() {},
+    deleteCheckItem: function() {},
+    deleteLabel: function() {},
+    moveCardFromBoard: function() {},
+    moveCardToBoard: function() {},
+    moveListFromBoard: function() {},
+    moveListToBoard: function() {},
+    removeChecklistFromCard: function() {},
+    removeFromOrganizationBoard: function() {},
+    removeLabelFromCard: function() {},
+    updateBoard: function() {},
+    updateLabel: function() {},
+    copyBoard: function() {},
+    copyCard: function() {},
+    copyChecklist: function() {},
+    copyCommentCard: function() {},
+    voteOnCard: function() {},
+    updateChecklist: function() {},
+    commentCard: function(action) {
+      return views.actions.base(
+        views.actions.header(action),
+        action.data.text
+      );
+    },
+    updateCheckItemStateOnCard: function(action) {
+      return views.actions.base(
+        views.actions.header(action),
+        [
+          'Marked ',
+          h('span', { className: 'font-bold' }, action.data.checkItem.name),
+          ' ',
+          h('span', { className: '' }, action.data.checkItem.state)
+        ]
+      );
+    },
+    /* Custom Action Viewers */
+    moveCard: function (action) {
+      return views.actions.base(
+        views.actions.header(action),
+        [
+          ' from ',
+          h('span', { className: 'font-bold' }, action.data.listBefore.name),
+          ' to ',
+          h('span', { className: 'font-bold' }, action.data.listAfter.name)
+        ]);
+    },
+    dueDateComplete: function (action) {
+      return views.actions.base(
+        views.actions.header(action),
+        [
+          'Marked ',
+          h('span', { className: 'font-bold' },
+            action.data.card.dueComplete ? 'Complete' : 'Incomplete'),
+        ]);
+    },
+    /* Custom Action Viewers */
+    updateCard: function(action) {
+      if (action.data.listBefore)
+        return views.actions.moveCard(action);
+      if (action.data.old.hasOwnProperty('dueComplete'))
+        return views.actions.dueDateComplete(action);
+    },
+    updateCheckItem: function() {},
+    updateList: function() {},
+  },
   wrapper: function (classes, children) {
     return h("div",{
       className: classes,
@@ -218,101 +327,27 @@ var views = {
             }))
         })));
   },
-  comment: function (state, actions, comment) {
-    return h('div', { className: 'p-1' }, 
-      h('div', { className: 'border-2 border-black rounded' }, [
-        h('div', { className: 'p-2 border-b border-black' }, [
-          h('a', {
-            className: '',
-            href: 'https://trello.com/c/' + comment.data.card.shortLink + '#action-' + comment.id
-          }, comment.data.card.name),
-        ]),
-        h('div', { className: 'p-2' }, comment.data.text)
-      ]));
-  },
-  attachment: function (state, actions, attachment) {
-    var url = attachment.data.attachment.url;
-    console.log(attachment);
-    return h('div', { className: 'p-1' }, 
-      h('div', { className: 'p-2 border-2 border-black rounded' }, [
-        h('div', { className: '' }, [
-          h('a', {
-            className: '',
-            href: 'https://trello.com/c/' + attachment.data.card.shortLink + '#action-' + attachment.id
-          }, attachment.data.card.name),
-        ]),
-        url !== undefined
-        ? (url.match(/\.(png|jpg|svg)$/)
-          ? h('img', { className: 'w-full', src: url })
-          : h('a', { target: '_blank', href: url }, url))
-        : ''
-      ]));
-  },
-  movedCard: function (state, actions, action) {
-    return h('div', { className: 'p-1' }, 
-      h('div', { className: 'p-2 border-2 border-black rounded' }, [
-        h('div', { className: '' }, [
-          h('a', {
-            className: '',
-            href: 'https://trello.com/c/' + action.data.card.shortLink + '#action-' + action.id
-          }, action.data.card.name),
-          ' from ',
-          h('span', { className: 'font-bold' }, action.data.listBefore.name),
-          ' to ',
-          h('span', { className: 'font-bold' }, action.data.listAfter.name)
-        ])
-      ]));
-  },
-  dueDate: function (state, actions, action) {
-    return h('div', { className: 'p-1' }, 
-      h('div', { className: 'p-2 border-2 border-black rounded' }, [
-        h('div', { className: '' }, [
-          h('a', {
-            className: '',
-            href: 'https://trello.com/c/' + action.data.card.shortLink + '#action-' + action.id
-          }, action.data.card.name)
-        ]),
-        'Marked ',
-        h('span', { className: 'font-bold' },
-          action.data.card.dueComplete ? 'Complete' : 'Incomplete'),
-      ]));
-  },
-  checkbox: function (state, actions, action) {
-    return h('div', { className: 'p-1' }, 
-      h('div', { className: 'p-2 border-2 border-black rounded' }, [
-        h('div', { className: '' }, [
-          h('a', {
-            className: '',
-            href: 'https://trello.com/c/' + action.data.card.shortLink + '#action-' + action.id
-          }, action.data.card.name)
-        ]),
-        'Marked ',
-        h('span', { className: 'font-bold' }, action.data.checkItem.name),
-        ' ',
-        h('span', { className: '' }, action.data.checkItem.state)
-      ]));
-  },
   currentMember: function (state, actions) {
     var comments = state.currentMember.actions.filter(function (action) {
-      return action.type === 'commentCard';
-    }).map(views.comment.bind(views, state, actions));
+      return ['commentCard'].indexOf(action.type) > -1;
+    }).map(views.action);
 
     var attachments = state.currentMember.actions.filter(function (action) {
       return action.type === 'addAttachmentToCard';
-    }).map(views.attachment.bind(views, state, actions));
+    }).map(views.action);
 
-    var movedCards = state.currentMember.actions.filter(function (action) {
+    var cards = state.currentMember.actions.filter(function (action) {
       return action.type === 'updateCard' && action.data.listBefore;
-    }).map(views.movedCard.bind(views, state, actions));
+    }).map(views.action);
 
     var dueDates = state.currentMember.actions.filter(function (action) {
       return action.type === 'updateCard'
         && action.data.old.hasOwnProperty('dueComplete');
-    }).map(views.dueDate.bind(views, state, actions));
+    }).map(views.action);
 
     var checkboxes = state.currentMember.actions.filter(function (action) {
       return action.type === 'updateCheckItemStateOnCard';
-    }).map(views.checkbox.bind(views, state, actions));
+    }).map(views.action);
 
     return h('div', { className: 'flex flex-row' }, [
       h('div', { className: 'p-1' },
@@ -322,8 +357,8 @@ var views = {
         [h('h2', {}, 'Attachments')]
           .concat(attachments)),
       h('div', { className: 'p-1' },
-        [h('h2', {}, 'Moved Cards')]
-          .concat(movedCards)),
+        [h('h2', {}, 'Cards')]
+          .concat(cards)),
       h('div', { className: 'p-1' },
         [h('h2', {}, 'Due Dates')]
           .concat(dueDates)),
@@ -333,7 +368,11 @@ var views = {
     ]);
   },
   boards: function (state, actions, organization) {
-    var members = organization.boards[0].members || [];
+    var members = (organization.boards[0].members || [])
+      .filter(function (member) {
+        return hiddenMemberUsernames.indexOf(member.username) < 0;
+      });
+
     var memberIds = members.map(get('id'));
     var memberNames = members.map(get('fullName'));
 
