@@ -219,7 +219,7 @@ var views = {
     header: function (action) {
       var href = String
         .format('https://trello.com/c/{shortLink}#action-{id}', {
-          shortLink: action.data.shortLink,
+          shortLink: action.data.card.shortLink,
           id: action.id
         });
 
